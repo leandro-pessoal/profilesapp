@@ -1,34 +1,90 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useEffect, useState } from 'react'
+import personalizeLogo from '/Arch_Amazon-Personalize_64.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [userId, setUserId] = useState('76')
+  const [recs, setRecs] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function fetchRecommendations(id) {
+    setLoading(true)
+    setError(null)
+    setRecs([])
+    try {
+      const url = `https://7waziao4cc.execute-api.us-east-1.amazonaws.com/get_recomendation?userId=${encodeURIComponent(
+        id,
+      )}`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setRecs(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setError(err.message || 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // fetch default recommendations on mount
+    if (userId) fetchRecommendations(userId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
+    <div className="App">
+      <header style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <a href="https://react.dev" target="_blank" rel="noreferrer">
+          <img src={personalizeLogo} className="logo personalize" alt="React personalize" />
         </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+        <h1 style={{ margin: 0 }}>Recommendations</h1>
+      </header>
+
+      <section style={{ marginTop: 18 }}>
+        <label>
+          User ID:{' '}
+          <input
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            style={{ width: 100 }}
+          />
+        </label>
+        <button
+          onClick={() => fetchRecommendations(userId)}
+          style={{ marginLeft: 12 }}
+        >
+          Get recommendations
         </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      </section>
+
+      <section style={{ marginTop: 18 }}>
+        {loading && <p>Loading recommendations…</p>}
+        {error && (
+          <p style={{ color: 'crimson' }}>Error fetching: {error}</p>
+        )}
+
+        {!loading && !error && recs.length === 0 && (
+          <p>No recommendations yet.</p>
+        )}
+
+        {recs.length > 0 && (
+          <ol>
+            {recs.map((r) => (
+              <li key={r.movieId} style={{ marginBottom: 8 }}>
+                <div>
+                  <strong>{r.title}</strong> — <em>{r.genres}</em>
+                </div>
+                <div style={{ fontSize: 12, color: '#555' }}>
+                  Rank: {r.rank} • Score: {r.score}
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+    </div>
   )
 }
 
